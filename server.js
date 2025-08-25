@@ -1,20 +1,26 @@
-const express = require("express");
-const path = require("path");
+import express from "express";
+import fetch from "node-fetch";
+import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
+
+dotenv.config();
+
 const app = express();
-require("dotenv").config();
+const port = process.env.PORT || 3000;
 
-const PORT = process.env.PORT || 3000;
+// dirname setup for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-// 🟢 Ye line add karo - static files serve karne ke liye
-app.use(express.static(path.join(__dirname)));
-
-// API route (Gemini se baat karne ke liye)
 app.use(express.json());
+app.use(express.static(__dirname));
 
-app.post("/chat", async (req, res) => {
-  const userMessage = req.body.message;
-
+// Route to call Gemini API
+app.post("/api/chat", async (req, res) => {
   try {
+    const userMessage = req.body.message;
+
     const response = await fetch(
       "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" +
         process.env.GEMINI_API_KEY,
@@ -28,20 +34,17 @@ app.post("/chat", async (req, res) => {
     );
 
     const data = await response.json();
-    const botReply = data?.candidates?.[0]?.content?.parts?.[0]?.text || "Sorry, samajh nahi paya 😅";
+    const botReply =
+      data?.candidates?.[0]?.content?.parts?.[0]?.text ||
+      "Sorry, I couldn't generate a reply.";
 
     res.json({ reply: botReply });
   } catch (error) {
     console.error("Error:", error);
-    res.status(500).json({ reply: "Server error ⚠️" });
+    res.status(500).json({ reply: "Something went wrong!" });
   }
 });
 
-// 🟢 Agar koi direct root URL hit kare to index page bhej do
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "muskan-bot.html"));
-});
-
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+app.listen(port, () => {
+  console.log(`Server running at http://localhost:${port}`);
 });
